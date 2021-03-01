@@ -268,11 +268,13 @@ def send_raw_msg(self, msgType, content, toUserName):
             'Type': msgType,
             'Content': content,
             'FromUserName': self.storageClass.userName,
-            'ToUserName': (toUserName if toUserName else self.storageClass.userName),
+            'ToUserName': toUserName or self.storageClass.userName,
             'LocalID': int(time.time() * 1e4),
             'ClientMsgId': int(time.time() * 1e4),
-            },
-        'Scene': 0, }
+        },
+        'Scene': 0,
+    }
+
     headers = { 'ContentType': 'application/json; charset=UTF-8', 'User-Agent' : config.USER_AGENT }
     r = self.s.post(url, headers=headers,
         data=json.dumps(data, ensure_ascii=False).encode('utf8'))
@@ -280,8 +282,7 @@ def send_raw_msg(self, msgType, content, toUserName):
 
 def send_msg(self, msg='Test Message', toUserName=None):
     logger.debug('Request to send a text message to %s: %s' % (toUserName, msg))
-    r = self.send_raw_msg(1, msg, toUserName)
-    return r
+    return self.send_raw_msg(1, msg, toUserName)
 
 def _prepare_file(fileDir, file_=None):
     fileDict = {}
@@ -310,8 +311,8 @@ def upload_file(self, fileDir, isPicture=False, isVideo=False,
         'picture' if isPicture else 'video' if isVideo else 'file', fileDir))
     if not preparedFile:
         preparedFile = _prepare_file(fileDir, file_)
-        if not preparedFile:
-            return preparedFile
+    if not preparedFile:
+        return preparedFile
     fileSize, fileMd5, file_ = \
         preparedFile['fileSize'], preparedFile['fileMd5'], preparedFile['file_']
     fileSymbol = 'pic' if isPicture else 'video' if isVideo else'doc'
@@ -409,19 +410,18 @@ def send_file(self, fileDir, toUserName=None, mediaId=None, file_=None):
 def send_image(self, fileDir=None, toUserName=None, mediaId=None, file_=None):
     logger.debug('Request to send a image(mediaId: %s) to %s: %s' % (
         mediaId, toUserName, fileDir))
-    if fileDir or file_:
-        if hasattr(fileDir, 'read'):
-            file_, fileDir = fileDir, None
-        if fileDir is None:
-            fileDir = 'tmp.jpg' # specific fileDir to send gifs
-    else:
+    if not fileDir and not file_:
         return ReturnValue({'BaseResponse': {
             'ErrMsg': 'Either fileDir or file_ should be specific',
             'Ret': -1005, }})
+    if hasattr(fileDir, 'read'):
+        file_, fileDir = fileDir, None
+    if fileDir is None:
+        fileDir = 'tmp.jpg' # specific fileDir to send gifs
     if toUserName is None:
         toUserName = self.storageClass.userName
     if mediaId is None:
-        r = self.upload_file(fileDir, isPicture=not fileDir[-4:] == '.gif', file_=file_)
+        r = self.upload_file(fileDir, isPicture=fileDir[-4:] != '.gif', file_=file_)
         if r:
             mediaId = r['MediaId']
         else:
@@ -451,15 +451,14 @@ def send_image(self, fileDir=None, toUserName=None, mediaId=None, file_=None):
 def send_video(self, fileDir=None, toUserName=None, mediaId=None, file_=None):
     logger.debug('Request to send a video(mediaId: %s) to %s: %s' % (
         mediaId, toUserName, fileDir))
-    if fileDir or file_:
-        if hasattr(fileDir, 'read'):
-            file_, fileDir = fileDir, None
-        if fileDir is None:
-            fileDir = 'tmp.mp4' # specific fileDir to send other formats
-    else:
+    if not fileDir and not file_:
         return ReturnValue({'BaseResponse': {
             'ErrMsg': 'Either fileDir or file_ should be specific',
             'Ret': -1005, }})
+    if hasattr(fileDir, 'read'):
+        file_, fileDir = fileDir, None
+    if fileDir is None:
+        fileDir = 'tmp.mp4' # specific fileDir to send other formats
     if toUserName is None:
         toUserName = self.storageClass.userName
     if mediaId is None:

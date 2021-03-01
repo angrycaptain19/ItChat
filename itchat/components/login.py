@@ -160,8 +160,8 @@ def process_login_info(core, loginContent):
             ("qq.com"          , ("file.wx.qq.com", "webpush.wx.qq.com")),
             ("web2.wechat.com" , ("file.web2.wechat.com", "webpush.web2.wechat.com")),
             ("wechat.com"      , ("file.web.wechat.com", "webpush.web.wechat.com"))):
-        fileUrl, syncUrl = ['https://%s/cgi-bin/mmwebwx-bin' % url for url in detailedUrl]
         if indexUrl in core.loginInfo['url']:
+            fileUrl, syncUrl = ['https://%s/cgi-bin/mmwebwx-bin' % url for url in detailedUrl]
             core.loginInfo['fileUrl'], core.loginInfo['syncUrl'] = \
                 fileUrl, syncUrl
             break
@@ -171,15 +171,18 @@ def process_login_info(core, loginContent):
     core.loginInfo['logintime'] = int(time.time() * 1e3)
     core.loginInfo['BaseRequest'] = {}
     for node in xml.dom.minidom.parseString(r.text).documentElement.childNodes:
-        if node.nodeName == 'skey':
+        if node.nodeName == 'pass_ticket':
+            core.loginInfo['pass_ticket'] = core.loginInfo['BaseRequest']['DeviceID'] = node.childNodes[0].data
+        elif node.nodeName == 'skey':
             core.loginInfo['skey'] = core.loginInfo['BaseRequest']['Skey'] = node.childNodes[0].data
         elif node.nodeName == 'wxsid':
             core.loginInfo['wxsid'] = core.loginInfo['BaseRequest']['Sid'] = node.childNodes[0].data
         elif node.nodeName == 'wxuin':
             core.loginInfo['wxuin'] = core.loginInfo['BaseRequest']['Uin'] = node.childNodes[0].data
-        elif node.nodeName == 'pass_ticket':
-            core.loginInfo['pass_ticket'] = core.loginInfo['BaseRequest']['DeviceID'] = node.childNodes[0].data
-    if not all([key in core.loginInfo for key in ('skey', 'wxsid', 'wxuin', 'pass_ticket')]):
+    if any(
+        key not in core.loginInfo
+        for key in ('skey', 'wxsid', 'wxuin', 'pass_ticket')
+    ):
         logger.error('Your wechat account may be LIMITED to log in WEB wechat, error info:\n%s' % r.text)
         core.isLogging = False
         return False
@@ -248,9 +251,7 @@ def start_receiving(self, exitCallback=None, getReceivingFnOnly=False):
                 i = sync_check(self)
                 if i is None:
                     self.alive = False
-                elif i == '0':
-                    pass
-                else:
+                elif i != '0':
                     msgList, contactList = self.get_msg()
                     if msgList:
                         msgList = produce_msg(self, msgList)
@@ -337,8 +338,11 @@ def get_msg(self):
     dic = json.loads(r.content.decode('utf-8', 'replace'))
     if dic['BaseResponse']['Ret'] != 0: return None, None
     self.loginInfo['SyncKey'] = dic['SyncKey']
-    self.loginInfo['synckey'] = '|'.join(['%s_%s' % (item['Key'], item['Val'])
-        for item in dic['SyncCheckKey']['List']])
+    self.loginInfo['synckey'] = '|'.join(
+        '%s_%s' % (item['Key'], item['Val'])
+        for item in dic['SyncCheckKey']['List']
+    )
+
     return dic['AddMsgList'], dic['ModContactList']
 
 def logout(self):

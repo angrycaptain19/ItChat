@@ -137,10 +137,12 @@ def update_local_chatrooms(core, l):
         if len(chatroom['MemberList']) != len(oldChatroom['MemberList']) and \
                 chatroom['MemberList']:
             existsUserNames = [member['UserName'] for member in chatroom['MemberList']]
-            delList = []
-            for i, member in enumerate(oldChatroom['MemberList']):
-                if member['UserName'] not in existsUserNames:
-                    delList.append(i)
+            delList = [
+                i
+                for i, member in enumerate(oldChatroom['MemberList'])
+                if member['UserName'] not in existsUserNames
+            ]
+
             delList.sort(reverse=True)
             for i in delList:
                 del oldChatroom['MemberList'][i]
@@ -210,7 +212,7 @@ def update_local_uin(core, msg):
         usernames = msg['StatusNotifyUserName'].split(',')
         if 0 < len(uins) == len(usernames):
             for uin, username in zip(uins, usernames):
-                if not '@' in username: continue
+                if '@' not in username: continue
                 fullContact = core.memberList + core.chatroomList + core.mpList
                 userDicts = utils.search_dict_list(fullContact,
                     'UserName', username)
@@ -308,10 +310,9 @@ def get_friends(self, update=False):
 def get_chatrooms(self, update=False, contactOnly=False):
     if contactOnly:
         return self.get_contact(update=True)
-    else:
-        if update:
-            self.get_contact(True)
-        return utils.contact_deep_copy(self, self.chatroomList)
+    if update:
+        self.get_contact(True)
+    return utils.contact_deep_copy(self, self.chatroomList)
 
 def get_mps(self, update=False):
     if update: self.get_contact(update=True)
@@ -456,7 +457,9 @@ def delete_member_from_chatroom(self, chatroomUserName, memberList):
     data = {
         'BaseRequest': self.loginInfo['BaseRequest'],
         'ChatRoomName': chatroomUserName,
-        'DelMemberList': ','.join([member['UserName'] for member in memberList]), }
+        'DelMemberList': ','.join(member['UserName'] for member in memberList),
+    }
+
     headers = {
         'content-type': 'application/json; charset=UTF-8',
         'User-Agent' : config.USER_AGENT}
@@ -482,9 +485,11 @@ def add_member_into_chatroom(self, chatroomUserName, memberList,
     url = '%s/webwxupdatechatroom?fun=%s&pass_ticket=%s' % (
         self.loginInfo['url'], fun, self.loginInfo['pass_ticket'])
     params = {
-        'BaseRequest'  : self.loginInfo['BaseRequest'],
-        'ChatRoomName' : chatroomUserName,
-        memberKeyName  : ','.join([member['UserName'] for member in memberList]), }
+        'BaseRequest': self.loginInfo['BaseRequest'],
+        'ChatRoomName': chatroomUserName,
+        memberKeyName: ','.join(member['UserName'] for member in memberList),
+    }
+
     headers = {
         'content-type': 'application/json; charset=UTF-8',
         'User-Agent' : config.USER_AGENT}

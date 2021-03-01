@@ -60,7 +60,7 @@ class ContactList(list):
         self.contactInitFn = None
         self.contactClass = User
     def __str__(self):
-        return '[%s]' % ', '.join([repr(v) for v in self])
+        return '[%s]' % ', '.join(repr(v) for v in self)
     def __repr__(self):
         return '<%s: %s>' % (self.__class__.__name__.split('.')[-1],
             self.__str__())
@@ -132,7 +132,8 @@ class AbstractUserDict(AttributeDict):
         return r
     def __str__(self):
         return '{%s}' % ', '.join(
-            ['%s: %s' % (repr(k),repr(v)) for k,v in self.items()])
+            '%s: %s' % (repr(k), repr(v)) for k, v in self.items()
+        )
     def __repr__(self):
         return '<%s: %s>' % (self.__class__.__name__.split('.')[-1],
             self.__str__())
@@ -228,23 +229,30 @@ class Chatroom(AbstractUserDict):
                     if matchDict[k] is None:
                         del matchDict[k]
                 if name: # select based on name
-                    contact = []
-                    for m in self.memberList:
-                        if any([m.get(k) == name for k in ('RemarkName', 'NickName', 'Alias')]):
-                            contact.append(m)
+                    contact = [
+                        m
+                        for m in self.memberList
+                        if any(
+                            m.get(k) == name
+                            for k in ('RemarkName', 'NickName', 'Alias')
+                        )
+                    ]
+
                 else:
                     contact = self.memberList[:]
                 if matchDict: # select again based on matchDict
-                    friendList = []
-                    for m in contact:
-                        if all([m.get(k) == v for k, v in matchDict.items()]):
-                            friendList.append(m)
+                    friendList = [
+                        m
+                        for m in contact
+                        if all(m.get(k) == v for k, v in matchDict.items())
+                    ]
+
                     return copy.deepcopy(friendList)
                 else:
                     return copy.deepcopy(contact)
     def __setstate__(self, state):
         super(Chatroom, self).__setstate__(state)
-        if not 'MemberList' in self:
+        if 'MemberList' not in self:
             self['MemberList'] = fakeContactList
 
 class ChatroomMember(AbstractUserDict):
@@ -306,12 +314,11 @@ class ChatroomMember(AbstractUserDict):
 def wrap_user_dict(d):
     userName = d.get('UserName')
     if '@@' in userName:
-        r = Chatroom(d)
+        return Chatroom(d)
     elif d.get('VerifyFlag', 8) & 8 == 0:
-        r = User(d)
+        return User(d)
     else:
-        r = MassivePlatform(d)
-    return r
+        return MassivePlatform(d)
 
 fakeItchat = UnInitializedItchat()
 fakeContactList = ContactList()
